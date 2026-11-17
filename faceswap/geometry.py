@@ -37,23 +37,40 @@ def warp_face(frame, kps, template, size, interp=cv2.INTER_CUBIC):
     return crop, m
 
 
-def paste_back(frame: np.ndarray, crop: np.ndarray, mask: np.ndarray, m: np.ndarray) -> np.ndarray:
-    """Cola `crop` (float BGR) em `frame` usando a inversa de `m`, só na região afetada."""
+def frame_roi(m: np.ndarray, crop_size: tuple, frame_shape: tuple):
+    """Região do frame coberta pelo recorte e a transformação recorte -> região."""
     inv = cv2.invertAffineTransform(m)
-    h, w = crop.shape[:2]
+    w, h = crop_size
     corners = np.array([[0, 0], [w, 0], [0, h], [w, h]], np.float32)
     pts = corners @ inv[:, :2].T + inv[:, 2]
-    fh, fw = frame.shape[:2]
+    fh, fw = frame_shape[:2]
     x1, y1 = np.floor(pts.min(0)).astype(int)
     x2, y2 = np.ceil(pts.max(0)).astype(int)
     x1, y1, x2, y2 = max(x1, 0), max(y1, 0), min(x2, fw), min(y2, fh)
     if x2 <= x1 or y2 <= y1:
+        return None
+    inv[:, 2] -= (x1, y1)
+    return (x1, y1, x2, y2), inv
+
+
+def mask_to_frame(mask: np.ndarray, m: np.ndarray, frame_shape: tuple):
+    """Leva uma máscara do espaço do recorte para o frame. Retorna ((x1, y1, x2, y2), máscara) ou None."""
+    roi = frame_roi(m, mask.shape[::-1], frame_shape)
+    if roi is None:
+        return None
+    (x1, y1, x2, y2), inv = roi
+    return (x1, y1, x2, y2), cv2.warpAffine(mask, inv, (x2 - x1, y2 - y1), flags=cv2.INTER_LINEAR, borderValue=0)
+
+
+def paste_back(frame: np.ndarray, crop: np.ndarray, mask: np.ndarray, m: np.ndarray) -> np.ndarray:
+    """Cola `crop` (float BGR) em `frame` usando a inversa de `m`, só na região afetada."""
+    roi = frame_roi(m, crop.shape[1::-1], frame.shape)
+    if roi is None:
         return frame
-    inv_roi = inv.copy()
-    inv_roi[:, 2] -= (x1, y1)
+    (x1, y1, x2, y2), inv = roi
     size = (x2 - x1, y2 - y1)
-    warped = cv2.warpAffine(crop, inv_roi, size, flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
-    wmask = cv2.warpAffine(mask, inv_roi, size, flags=cv2.INTER_LINEAR, borderValue=0)[..., None]
-    roi = frame[y1:y2, x1:x2].astype(np.float32)
-    frame[y1:y2, x1:x2] = np.clip(wmask * warped + (1.0 - wmask) * roi, 0, 255).astype(np.uint8)
+    warped = cv2.warpAffine(crop, inv, size, flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+    wmask = cv2.warpAffine(mask, inv, size, flags=cv2.INTER_LINEAR, borderValue=0)[..., None]
+    region = frame[y1:y2, x1:x2].astype(np.float32)
+    frame[y1:y2, x1:x2] = np.clip(wmask * warped + (1.0 - wmask) * region, 0, 255).astype(np.uint8)
     return frame

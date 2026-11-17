@@ -11,12 +11,17 @@ ROOT = Path(__file__).resolve().parent.parent
 MODELS_DIR = Path(os.environ.get("FACESWAP_MODELS", ROOT / "models"))
 
 _FF = "https://github.com/facefusion/facefusion-assets/releases/download/models-3.0.0/"
+_FF33 = "https://github.com/facefusion/facefusion-assets/releases/download/models-3.3.0/"
 _BUFFALO = "https://github.com/deepinsight/insightface/releases/download/v0.7/buffalo_l.zip"
 
 # nome -> (url, arquivo dentro de MODELS_DIR)
 MODELS = {
     "det_10g": (_BUFFALO, "buffalo_l/det_10g.onnx"),
     "w600k_r50": (_BUFFALO, "buffalo_l/w600k_r50.onnx"),
+    "genderage": (_BUFFALO, "buffalo_l/genderage.onnx"),
+    "hyperswap_1a_256": (_FF33 + "hyperswap_1a_256.onnx", "hyperswap_1a_256.onnx"),
+    "hyperswap_1b_256": (_FF33 + "hyperswap_1b_256.onnx", "hyperswap_1b_256.onnx"),
+    "hyperswap_1c_256": (_FF33 + "hyperswap_1c_256.onnx", "hyperswap_1c_256.onnx"),
     "inswapper_128": (_FF + "inswapper_128.onnx", "inswapper_128.onnx"),
     "bisenet_resnet_34": (_FF + "bisenet_resnet_34.onnx", "bisenet_resnet_34.onnx"),
     "gfpgan_1.4": (_FF + "gfpgan_1.4.onnx", "gfpgan_1.4.onnx"),

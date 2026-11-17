@@ -32,11 +32,14 @@ class FaceParser:
         self.sess = models.session("bisenet_resnet_34")
         self.input = self.sess.get_inputs()[0].name
 
-    def mask(self, crop: np.ndarray, size: int, dilate: int = 0) -> np.ndarray:
-        x = cv2.resize(crop.astype(np.uint8), (self.SIZE, self.SIZE), interpolation=cv2.INTER_LINEAR)
+    def labels(self, crop: np.ndarray) -> np.ndarray:
+        """Mapa de classes 512x512 (1 = pele, 2/3 = sobrancelhas, 4/5 = olhos, 10 = nariz, ...)."""
+        x = cv2.resize(np.clip(crop, 0, 255).astype(np.uint8), (self.SIZE, self.SIZE), interpolation=cv2.INTER_LINEAR)
         x = (x[:, :, ::-1].astype(np.float32) / 255.0 - _MEAN) / _STD
-        logits = self.sess.run(None, {self.input: x.transpose(2, 0, 1)[None]})[0][0]
-        m = np.isin(logits.argmax(0), FACE_REGIONS).astype(np.float32)
+        return self.sess.run(None, {self.input: x.transpose(2, 0, 1)[None]})[0][0].argmax(0)
+
+    def mask(self, crop: np.ndarray, size: int, dilate: int = 0) -> np.ndarray:
+        m = np.isin(self.labels(crop), FACE_REGIONS).astype(np.float32)
         if dilate > 0:
             m = cv2.dilate(m, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (dilate * 2 + 1,) * 2))
         m = cv2.resize(m, (size, size), interpolation=cv2.INTER_LINEAR)
