@@ -1,0 +1,8 @@
+numpy
+opencv-python
+onnx
+onnxruntime-gpu[cuda,cudnn]
+scipy
+imageio-ffmpeg
+gradio
+tqdm
