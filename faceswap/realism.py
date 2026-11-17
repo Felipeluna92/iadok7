@@ -103,3 +103,27 @@ def skin_ab(img: np.ndarray, skin_mask: np.ndarray):
         return None
     lab = cv2.cvtColor((img / 255.0).astype(np.float32), cv2.COLOR_BGR2LAB)
     return lab[..., 1:][m].mean(0)
+
+
+def _lab(img: np.ndarray) -> np.ndarray:
+    return cv2.cvtColor((np.clip(img, 0, 255) / 255.0).astype(np.float32), cv2.COLOR_BGR2LAB)
+
+
+def color_match(img: np.ndarray, ref: np.ndarray, img_skin: np.ndarray, ref_skin: np.ndarray,
+                mask: np.ndarray, amount: float, state: dict, smooth: float = 0.7) -> np.ndarray:
+    """Iguala a cor da pele do rosto novo à pele do rosto original no mesmo frame (média e contraste
+    em LAB), medindo só pele — sem barba, olhos ou boca. Assim o rosto combina com orelhas e pescoço.
+    Os parâmetros são suavizados entre frames para não piscar."""
+    if amount <= 0 or img_skin.sum() < 200 or ref_skin.sum() < 200:
+        return img
+    li, lr = _lab(img), _lab(ref)
+    params = np.stack([li[img_skin].mean(0), li[img_skin].std(0) + 1e-3,
+                       lr[ref_skin].mean(0), lr[ref_skin].std(0) + 1e-3])
+    if "color" in state:
+        params = smooth * state["color"] + (1 - smooth) * params
+    state["color"] = params
+    mu_i, sd_i, mu_r, sd_r = params
+    ratio = np.clip(sd_r / sd_i, 0.75, 1.33)
+    matched = (li - mu_i) * ratio + mu_r
+    out = li + (matched - li) * (amount * mask[..., None])
+    return cv2.cvtColor(out, cv2.COLOR_LAB2BGR) * 255.0

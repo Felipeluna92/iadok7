@@ -25,10 +25,10 @@ def _load_sources(files):
     return [i for i, _ in imgs], [n for _, n in imgs]
 
 
-def _settings(swapper, resolution, strength, sharp, grain, temporal, skin, enhancer, blend, fidelity,
+def _settings(swapper, resolution, strength, color, sharp, grain, temporal, skin, enhancer, blend, fidelity,
               smoothing, max_gap, det_thr, mask_blur, occlusion, model_mask, pad_top, pad_bottom,
               mode, ref_thr, crf, watermark, keep_audio):
-    return Settings(swapper=swapper, swap_resolution=int(resolution), identity_strength=strength,
+    return Settings(swapper=swapper, swap_resolution=int(resolution), identity_strength=strength, color_match=color,
                     match_sharpness=sharp, grain=grain, temporal=temporal, skin_tone=skin, enhancer=enhancer,
                     enhancer_blend=blend, codeformer_fidelity=fidelity, smoothing=smoothing, max_gap=int(max_gap),
                     detect_threshold=det_thr, mask_blur=mask_blur, occlusion=occlusion, model_mask=model_mask,
@@ -122,10 +122,11 @@ with gr.Blocks(title="FaceSwap Studio") as demo:
                 strength = gr.Slider(0, 0.5, 0.2, step=0.05, label="Força da identidade (remove traços do rosto original)")
 
             with gr.Accordion("Realismo (integração com a câmera)", open=True):
+                color = gr.Slider(0, 1, 0.85, step=0.05, label="Cor da pele igual à do vídeo (orelhas e pescoço)")
                 sharp = gr.Checkbox(True, label="Igualar nitidez à do vídeo")
                 grain = gr.Slider(0, 1.5, 1.0, step=0.05, label="Granulação igual à do vídeo")
                 temporal = gr.Slider(0, 0.9, 0.5, step=0.05, label="Estabilidade entre frames")
-                skin = gr.Slider(0, 1, 0, step=0.05, label="Tom de pele da referência (veja a análise)")
+                skin = gr.Slider(0, 1, 0, step=0.05, label="Tom de pele da referência (substitui a cor do vídeo)")
                 enhancer = gr.Dropdown([("Nenhum (mais natural)", "none"), ("GFPGAN 1.4", "gfpgan_1.4"),
                                         ("GPEN 512", "gpen_bfr_512"), ("CodeFormer", "codeformer")],
                                        value="none", label="Melhorador de rosto (para vídeos de baixa qualidade)")
@@ -163,7 +164,7 @@ with gr.Blocks(title="FaceSwap Studio") as demo:
             output = gr.Video(label="Resultado", interactive=False)
             status = gr.Markdown()
 
-    opts = [swapper, resolution, strength, sharp, grain, temporal, skin, enhancer, blend, fidelity,
+    opts = [swapper, resolution, strength, color, sharp, grain, temporal, skin, enhancer, blend, fidelity,
             smoothing, max_gap, det_thr, mask_blur, occlusion, model_mask, pad_top, pad_bottom,
             mode, ref_thr, crf, watermark, keep_audio]
     video.change(on_video, video, t)

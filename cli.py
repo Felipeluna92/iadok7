@@ -17,6 +17,7 @@ def main():
                     choices=["hyperswap_1a_256", "hyperswap_1b_256", "hyperswap_1c_256", "inswapper_128"])
     ap.add_argument("--resolution", type=int, choices=[128, 256, 512], default=512)
     ap.add_argument("--strength", type=float, default=0.2, help="força da identidade (0 a 0.5)")
+    ap.add_argument("--color", type=float, default=0.85, help="cor da pele igual à do vídeo (0 a 1)")
     ap.add_argument("--grain", type=float, default=1.0)
     ap.add_argument("--temporal", type=float, default=0.5)
     ap.add_argument("--skin", type=float, default=0.0, help="tom de pele da referência (0 a 1)")
@@ -39,7 +40,7 @@ def main():
     if args.analyse_only:
         return
 
-    s = Settings(swapper=args.swapper, swap_resolution=args.resolution, identity_strength=args.strength,
+    s = Settings(swapper=args.swapper, swap_resolution=args.resolution, identity_strength=args.strength, color_match=args.color,
                  grain=args.grain, temporal=args.temporal, skin_tone=args.skin, enhancer=args.enhancer,
                  enhancer_blend=args.blend, smoothing=args.smoothing, crf=args.crf, mode=args.mode,
                  match_sharpness=not args.no_sharpness_match, occlusion=not args.no_occlusion,

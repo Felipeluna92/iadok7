@@ -18,7 +18,9 @@ Roda localmente na sua GPU NVIDIA (testado para GTX 1660 Super, 6 GB) com interf
 | Força da identidade | Afasta a identidade do rosto original | Remove traços que "vazam" do rosto original do vídeo |
 | Máscara | Borda suave + segmentação BiSeNet + média entre frames | Bordas invisíveis; mãos e objetos na frente do rosto ficam por cima |
 | **Realismo** | Nitidez e granulação iguais às da câmera; estabilização temporal adaptativa | O rosto ganha a mesma textura, foco e ruído do vídeo, sem "cara de IA" nem "fervura" |
+| Cor da pele | Igualação LAB medida só na pele (sem barba, olhos, boca), suavizada entre frames | O rosto fica com a mesma cor das orelhas e do pescoço |
 | Tom de pele (opcional) | Transferência de cor LAB preservando a luz | Aproxima a cor da pele da referência sem mudar a iluminação da cena |
+| Vídeo HDR de celular | Conversão automática HDR → SDR (tone mapping) | Evita cores lavadas em vídeos HEVC 10-bit/HDR10/HLG |
 | Saída | FFmpeg H.264 (CRF 14, preset slow) + áudio original | Arquivo final com qualidade alta |
 
 ### Testes feitos
@@ -71,7 +73,8 @@ pip install onnxruntime-directml
 
 - **Fidelidade baixa (< 0,6)**: suba a "Força da identidade" para 0,3 e use fotos melhores.
 - **Rosto parece "colado" ou limpo demais**: mantenha "Igualar nitidez" ligado e suba a granulação para 1,2.
-- **Pele de cor diferente**: use o valor sugerido pela análise em "Tom de pele da referência".
+- **Rosto mais claro/escuro que o pescoço**: suba "Cor da pele igual à do vídeo" para 1,0.
+- **Quer a cor de pele da referência**: baixe a cor do vídeo e use "Tom de pele da referência".
 - **Tremido**: suba a "Suavização do movimento" para 2,5–3. Se o rosto escorregar em movimentos
   rápidos, baixe para 0,8–1.
 - **Testa ou queixo original aparecendo**: ajuste os recuos da máscara.

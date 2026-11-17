@@ -140,7 +140,8 @@ def build_source_profile(pipe, images: list, names: list = None) -> SourceProfil
 
 
 def analyse_video(pipe, video: str, samples: int = 12) -> dict:
-    from .video_io import probe, read_frames
+    from .video_io import prepare_input, probe, read_frames
+    video = prepare_input(video)
     info = probe(video)
     n = max(info["frames"], 1)
     picks = set(np.linspace(0, n - 1, min(samples, n)).astype(int).tolist())
@@ -173,7 +174,8 @@ def analyse_video(pipe, video: str, samples: int = 12) -> dict:
 
 
 def compatibility_markdown(src: SourceProfile, vid: dict) -> str:
-    lines = ["### Fotos de referência", "| Foto | Qualidade | Resolução | Nitidez | Ângulo | Idade/Gênero | Observações |",
+    lines = ["_Idade é uma estimativa aproximada; vale mais a diferença entre referência e vídeo._", "",
+             "### Fotos de referência", "| Foto | Qualidade | Resolução | Nitidez | Ângulo | Idade/Gênero | Observações |",
              "|---|---|---|---|---|---|---|"]
     for r in src.reports:
         if not r.eye_dist:
@@ -181,7 +183,7 @@ def compatibility_markdown(src: SourceProfile, vid: dict) -> str:
             continue
         ang = "frontal" if abs(r.yaw) < 0.12 else ("leve" if abs(r.yaw) < 0.3 else "perfil")
         lines.append(f"| {r.name} | **{r.quality:.0f}/100** | {r.eye_dist:.0f}px | {r.sharp:.0f} | {ang} | "
-                     f"{r.age} / {r.gender} | {'; '.join(r.notes) or 'ok'} |")
+                     f"~{r.age} / {r.gender} | {'; '.join(r.notes) or 'ok'} |")
     lines += ["", f"Identidade final: média ponderada de {sum(r.ok for r in src.reports)} foto(s), "
                   f"~{src.age} anos, {src.gender}."]
     if not vid.get("ok"):
@@ -203,9 +205,9 @@ def compatibility_markdown(src: SourceProfile, vid: dict) -> str:
     if vid["ab"] is not None and src.skin_ab is not None:
         d = float(np.linalg.norm(vid["ab"] - src.skin_ab))
         if d > 8:
-            tips.append(f"⚠️ Tom de pele bem diferente (Δ={d:.0f}). Ajuste 'Tom de pele da referência' para 0.4–0.7.")
-        elif d > 4:
-            tips.append(f"Tom de pele um pouco diferente (Δ={d:.0f}). 'Tom de pele da referência' em 0.3 pode ajudar.")
+            tips.append(f"⚠️ Tom de pele bem diferente (Δ={d:.0f}). A 'Cor da pele igual à do vídeo' já "
+                        "corrige o rosto para combinar com orelhas e pescoço; se preferir a cor da referência, "
+                        "use 'Tom de pele da referência'.")
     if vid["yaw_max"] > 0.35:
         tips.append("O vídeo tem momentos de perfil; inclua uma foto de referência mais de lado para esses trechos.")
     if vid["multi"]:

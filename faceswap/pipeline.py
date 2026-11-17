@@ -10,10 +10,10 @@ from .enhancer import FaceEnhancer
 from .geometry import ARCFACE_128, FFHQ_512, paste_back, warp_face
 from .masker import FaceParser, box_mask
 from .profile import AgeGender, SourceProfile, build_source_profile
-from .realism import match_grain, match_sharpness, temporal_stabilize, transfer_skin_tone
+from .realism import color_match, match_grain, match_sharpness, temporal_stabilize, transfer_skin_tone
 from .swapper import FaceSwapper
 from .tracking import Tracker, smooth_track
-from .video_io import VideoWriter, probe, read_frames
+from .video_io import VideoWriter, prepare_input, probe, read_frames
 
 FINISH = 512  # resolução do acabamento (alinhamento FFHQ)
 
@@ -38,6 +38,7 @@ class Settings:
     mask_padding: tuple = (0, 0, 0, 0)
     mask_smoothing: float = 0.5
     # acabamento / realismo
+    color_match: float = 0.85          # 0..1: cor da pele igual à do vídeo (orelhas, pescoço)
     enhancer: str = "none"             # none | gfpgan_1.4 | gpen_bfr_512 | codeformer
     enhancer_blend: float = 0.5
     codeformer_fidelity: float = 0.7
@@ -209,6 +210,10 @@ class FaceSwapPipeline:
             fmask = cv2.warpAffine(mask, _compose(m2, m), (FINISH, FINISH), flags=cv2.INTER_LINEAR, borderValue=0)
             if enh is not None:
                 fin = fin * (1 - s.enhancer_blend) + enh.enhance(fin) * s.enhancer_blend
+            if s.color_match > 0:
+                skin_f = self.parser.labels(fin) == 1
+                skin_o = self.parser.labels(orig) == 1
+                fin = color_match(fin, orig, skin_f, skin_o, fmask, s.color_match, st)
             if s.skin_tone > 0:
                 fin = transfer_skin_tone(fin, fmask, src.skin_ab, s.skin_tone)
             fin = temporal_stabilize(fin, st.get("prev"), orig, st.get("prev_orig"), s.temporal)
@@ -230,6 +235,7 @@ class FaceSwapPipeline:
     def process_video(self, sources: list, video: str, output: str, s: Settings,
                       reference_image=None, progress=None):
         progress = progress or (lambda p, d="": None)
+        video = prepare_input(video, progress)
         src = self.source_profile(sources)
         reference = self.largest_face_embedding(reference_image) if reference_image is not None else None
         if s.mode == "reference" and reference is None:
@@ -271,6 +277,7 @@ class FaceSwapPipeline:
         """Processa um frame com ±15 frames de contexto (suavização e estabilidade temporal reais)."""
         src = self.source_profile(sources)
         reference = self.largest_face_embedding(reference_image) if reference_image is not None else None
+        video = prepare_input(video)
         info = probe(video)
         target = min(int(time_sec * info["fps"]), max(info["frames"] - 1, 0))
         start, end = max(target - 15, 0), target + 16
